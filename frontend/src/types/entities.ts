@@ -1,7 +1,10 @@
-export type Dataset={id:string;name:string;source:string;row_count:number;learners:number;weeks:number[]};
+export type Dataset={id:string;name:string;source:string;row_count:number;learners:number;weeks:number[];version:number;quarantine_count:number};
+export type QuarantinedEvent={event_id:string;incoming:DatasetEvent;existing:DatasetEvent;reason:string;batch_id:string;archived_at:string};
+export type DatasetEvent={event_id:string;learner_id:string;week:number;state:string;sequence:number};
+export type IngestBatchSummary={id:string;dataset_id:string;source:string;status:string;created_at:string;received:number;duplicated:number;accepted:number;quarantined:number;version_before:number;version_after:number;failure_reason:string;actor:string;quarantined_events:QuarantinedEvent[]};
 export type Cohort={id:string;name:string;dataset_id:string;observation_end:number;include_completed:boolean};
 export type RetentionCell={age:number;calendar_week:number;eligible:number;observed:number;active:number;missing:number;censored:number;retention:number|null};
-export type Run={id:string;cohort_id:string;status:string;error:string;result:{learners:number;events:number;observation_end:number;cohorts:{cohort_week:number;size:number;cells:RetentionCell[]}[];markov:{states:string[];counts:number[][];matrix:number[][];expected_weeks:number[]|null;absorption:number[][]|null;identifiable:boolean;warning:string};limitations:string[];checksum:string}};
+export type Run={id:string;cohort_id:string;status:string;error:string;dataset_version:number;dataset_checksum:string;result:{learners:number;events:number;observation_end:number;cohorts:{cohort_week:number;size:number;cells:RetentionCell[]}[];markov:{states:string[];counts:number[][];matrix:number[][];expected_weeks:number[]|null;absorption:number[][]|null;identifiable:boolean;warning:string};limitations:string[];checksum:string}};
 export type Review={id:string;run_id:string;comment:string;status:string;reviewer:string};
 export type Report={id:string;run_id:string;review_id:string;title:string};
 export type User={email:string;name:string;role:string};

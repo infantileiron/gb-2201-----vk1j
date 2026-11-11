@@ -25,4 +25,8 @@ def download(id):
     m=r['markov']
     for i,state in enumerate(m['states']):
         for j,target in enumerate(m['states']):writer.writerow([state,target,m['counts'][i][j],m['matrix'][i][j]])
-    return '\ufeff'+out.getvalue()
+    writer.writerow([])
+    writer.writerow(['reproduced_from_dataset_version',run.get('dataset_version',1)])
+    writer.writerow(['reproduced_from_dataset_checksum',run.get('dataset_checksum',r['checksum'])])
+    writer.writerow(['note','本报告固定引用批准时运行的事件快照，后续台账合并不影响其复现结果'])
+    return '﻿'+out.getvalue()

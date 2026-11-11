@@ -2,6 +2,7 @@ from src.models.entities import TransitionRun
 from src.utils import repository as repo
 from src.utils.identity import new_id, now
 from src.services.statistics import analyze
+from src.services.ingest import checksum
 from src.config.settings import TASK_MODE, REDIS_URL, ARTIFACT_DIR
 import json
 def list_runs(): return repo.all_rows("runs")
@@ -12,7 +13,12 @@ def execute(id):
     try:
         exp=repo.get("cohorts",run["cohort_id"])
         dataset=repo.get("datasets",exp["dataset_id"])
-        run["result"]=analyze(dataset["rows"],exp["observation_end"],exp["include_completed"])
+        # 快照本次运行实际使用的事件行与数据版本；之后台账再合并补发也不改变该运行
+        rows=[dict(r) for r in dataset["rows"]]
+        run["dataset_version"]=dataset.get("version",1)
+        run["dataset_checksum"]=checksum(rows)
+        run["snapshot_rows"]=rows
+        run["result"]=analyze(rows,exp["observation_end"],exp["include_completed"])
         ARTIFACT_DIR.mkdir(parents=True,exist_ok=True)
         (ARTIFACT_DIR / (id+".json")).write_text(json.dumps(run["result"],ensure_ascii=False))
         run["status"]="completed"

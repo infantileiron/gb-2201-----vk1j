@@ -34,10 +34,23 @@ docker compose exec -T backend python -m scripts.seed_demo
 6. 09:20 记录内部缺测、右删失与齐次马尔可夫假设，提交口径复核。
 7. 09:25 运营复核人批准或退回；重复审批返回409。
 8. 09:30 根据批准记录生成报告，课程观察员下载含人数、分母、删失、计数与校验哈希的CSV。
+9. 14:00 上游补发迟到事件与更正：在原台账页整批合并，重复事件自动跳过、同编号冲突进隔离区并注明原因、合法迟到事件并入升版；旧报告仍按原快照下载，重新运行得到合并后版本的新分析。
 
 ## 核心算法与口径
 
 事件列：event_id,learner_id,week,state,sequence。同学员同周取最大sequence；重复事件编号、相同学员周次序号、终态后回退均拒绝，最多5000行。
+
+### 补发与更正事件合并（向原台账）
+
+学习事件会补发与更正，统一向**原台账**合并而不是另建台账，避免周报口径被多份台账混淆。在「学习事件」页选择目标台账上传补发 CSV 后，后端在单事务内整批处理：
+
+- **重复不新增**：送达事件的 event_id 与 learner/week/state/sequence 与台账完全一致时，幂等跳过，计数为「重复」。
+- **冲突即隔离**：同一 event_id 但任一内容字段不一致时，该事件进入台账隔离区并记录原因（含台账原记录与送达记录），不污染正式事件；隔离事件不参与任何计算。
+- **合法迟到参与重算**：未出现过的 event_id（无论事件周次早晚）校验通过后并入台账，下一次运行即参与留存与迁移重算。
+- **整批原子**：任一字段非法、超5000行上限或合并后触发「同学员同周序号重复 / 终态后回退」，整批回滚，不留半批数据；同时写入一条 `failed` 批次记录说明原因。
+- **数据版本**：仅当批次确有事件并入时台账版本号 +1（v1→v2…），纯重复/纯隔离批次不升版；每次升版归档合并前版本的校验哈希与行数。
+
+每个运行在执行时快照当时的完整事件行、数据版本号与校验哈希（`snapshot_rows`/`dataset_version`/`dataset_checksum`）。因此**已完成的分析与已批准报告始终按原数据字节级复现**，后续合并不改变其结果；报告 CSV 末尾标注其复现的数据版本与哈希。**新运行**则使用合并后的最新版本。「学习事件」页可查看每批的接收、重复跳过、并入、隔离数量、版本变化、操作人、失败原因及隔离事件明细。
 
 周留存：首次观测周定义队列，分母仅包括截止日已经达到该队列年龄的成员；超过观察截止日记右删失，分母0、留存率空值。内部未观测周独立计missing，既不前填也不当流失，该格留存率不发布。active计留存，include_completed可纳入completed。所有eligible/observed/active/missing/censored在结果中保存。
 
@@ -49,7 +62,7 @@ docker compose exec -T backend python -m scripts.seed_demo
 |---|---|
 | 前端 | React18 / TypeScript / Vite6 / Nginx1.28 |
 | 后端 | Python3.12 / FastAPI / psycopg3 / NumPy |
-| 持久化 | PostgreSQL16中五业务表、users、audit；每表id主键及JSON文本payload |
+| 持久化 | PostgreSQL16中六业务表（含ingest_batches补发批次台账）、users、audit；每表id主键及JSON文本payload |
 | 异步 | Redis7.4队列、独立Python worker、心跳健康检查 |
 
 `backend/src/{routes,controllers,services,models,schemas,middlewares,utils,constants,config}` 分离职责；`frontend/src/{api,stores,types,components/common,hooks,pages,router,utils,constants}` 构成六个业务页及登录页。相同RetentionMatrix组件用于总览和结果页。

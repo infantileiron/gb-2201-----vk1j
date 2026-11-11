@@ -9,6 +9,9 @@ class DatasetInput(BaseModel):
  csv_text:str=Field(min_length=20,max_length=1000000)
 class RenameDataset(BaseModel):
  name:str=Field(min_length=2,max_length=100)
+class IngestInput(BaseModel):
+ source:str=Field(default="补发事件批次",max_length=100)
+ csv_text:str=Field(min_length=20,max_length=1000000)
 class CohortDefinitionInput(BaseModel):
  name:str=Field(min_length=2,max_length=100)
  dataset_id:str

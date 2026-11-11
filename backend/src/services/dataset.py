@@ -6,13 +6,13 @@ from src.utils.identity import new_id,now
 from src.constants.states import STATES
 
 def summary(item):
- return {k:v for k,v in item.items() if k!="rows"}|{"row_count":len(item["rows"]),"learners":len({r["learner_id"] for r in item["rows"]}),"weeks":sorted({r["week"] for r in item["rows"]})}
+ return {k:v for k,v in item.items() if k!="rows"}|{"row_count":len(item["rows"]),"learners":len({r["learner_id"] for r in item["rows"]}),"weeks":sorted({r["week"] for r in item["rows"]}),"version":item.get("version",1),"quarantine_count":len(item.get("quarantined",[]))}
 def list_datasets():return [summary(x) for x in repo.all_rows("datasets")]
 def detail(id):return repo.get("datasets",id)
 def rename(id,data):
  item=repo.get("datasets",id);item['name']=data.name;repo.put('datasets',item);return summary(item)
 def create(data):
- reader=csv.DictReader(io.StringIO(data.csv_text.lstrip("\ufeff")))
+ reader=csv.DictReader(io.StringIO(data.csv_text.lstrip("﻿")))
  if not {'event_id','learner_id','week','state','sequence'}.issubset(reader.fieldnames or []):raise ValueError('CSV需要event_id,learner_id,week,state,sequence列')
  rows=[];seen=set()
  for n,r in enumerate(reader,2):
@@ -26,4 +26,6 @@ def create(data):
  # Validation includes terminal-state reversals and ambiguous duplicate sequences.
  from src.services.retention import weekly_snapshots
  weekly_snapshots(rows,52)
- item=EventDataset(new_id('ds'),data.name,data.source,rows,now());repo.put('datasets',item);return summary(asdict(item))
+ item=EventDataset(new_id('ds'),data.name,data.source,rows,now(),version=1)
+ repo.put('datasets',item)
+ return summary(asdict(item))
