@@ -1,0 +1,3 @@
+import type {Run} from '../types/entities';
+import {percent} from '../utils/format';
+export default function RetentionMatrix({run}:{run:Run}){return <div className="table-scroll"><table className="heatmap"><thead><tr><th>入组周 / 人数</th>{run.result.cohorts[0]?.cells.map(c=><th key={c.age}>W+{c.age}</th>)}</tr></thead><tbody>{run.result.cohorts.map(c=><tr key={c.cohort_week}><th>第{c.cohort_week}周 <small>n={c.size}</small></th>{c.cells.map(x=><td key={x.age} title={`观测 ${x.observed} / 内部缺测 ${x.missing} / 右删失 ${x.censored}`} style={{background:x.retention===null?'transparent':`oklch(${96-(x.retention*43)}% .09 93)`}}><strong>{percent(x.retention)}</strong><small>{x.observed}/{x.eligible}人可观测</small></td>)}</tr>)}</tbody></table></div>}
